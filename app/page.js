@@ -1,13 +1,5 @@
 "use client";
 import { useState } from "react";
-// 変更点: @/ を使わず相対パスに修正
-import { auth, db } from "../lib/firebase";
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut 
-} from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
 
 export default function Home() {
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -17,47 +9,43 @@ export default function Home() {
   const [user, setUser] = useState(null);
   const [error, setError] = useState("");
 
-  auth.onAuthStateChanged((currentUser) => {
-    setUser(currentUser);
-  });
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     try {
-      if (isLoginMode) {
-        await signInWithEmailAndPassword(auth, email, password);
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: isLoginMode ? 'login' : 'register',
+          email,
+          password,
+          username
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.status === 'success') {
+        setUser(data.user);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const newUser = userCredential.user;
-        
-        await setDoc(doc(db, "users", newUser.uid), {
-          uid: newUser.uid,
-          email: email,
-          username: username || email.split("@")[0],
-          createdAt: new Date(),
-        });
+        setError(data.message || 'エラーが発生しました');
       }
     } catch (err) {
-      setError(err.message);
+      setError('通信に失敗しました');
     }
-  };
-
-  const handleLogout = () => {
-    signOut(auth);
   };
 
   if (user) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gray-100">
         <div className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md text-center">
-          <h1 className="text-2xl font-bold mb-4 text-green-600">💬 LINE風アプリへようこそ！</h1>
-          <p className="text-gray-600 mb-6">ログイン中: <span className="font-semibold">{user.email}</span></p>
-          <div className="bg-gray-50 p-4 rounded-lg mb-6 text-sm text-gray-500">
-            ここに「友達追加」「チャット」「P2P通話」の機能を追加していきます！
-          </div>
+          <h1 className="text-2xl font-bold mb-4 text-green-600">💬 ログイン成功！</h1>
+          <p className="text-gray-600 mb-2">ユーザー: <span className="font-semibold">{user.username}</span></p>
+          <p className="text-gray-500 text-sm mb-6">({user.email})</p>
           <button 
-            onClick={handleLogout}
+            onClick={() => setUser(null)}
             className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition"
           >
             ログアウト
@@ -71,7 +59,7 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-100">
       <div className="bg-white p-8 rounded-2xl shadow-md w-full max-w-md">
         <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">
-          {isLoginMode ? "ログイン" : "アカウント作成"}
+          {isLoginMode ? "Vercelだけでログイン" : "アカウント作成"}
         </h1>
 
         {error && <p className="bg-red-100 text-red-600 p-3 rounded mb-4 text-sm">{error}</p>}
