@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { auth, db } from "@/lib/firebase";
+// 変更点: @/ を使わず相対パスに修正
+import { auth, db } from "../lib/firebase";
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
